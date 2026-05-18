@@ -1,67 +1,124 @@
 "use client";
 
-import Calendar from "@/components/Calendar";
-import Header from "@/components/Header";
-import Input from "@/components/Input";
-import Track from "@/components/Track";
+import { useState } from "react";
+
+import Page1 from "@/components/Page1";
+import Page2 from "@/components/Page2";
+import Page3 from "@/components/Page3";
+import Page4 from "@/components/Page4";
+import { page1Schema, page2Schema, page3Schema } from "@/lib/formSchemas";
+
+const initialValues = {
+  firstName: "",
+  lastName: "",
+  username: "",
+  email: "",
+  phoneNumber: "",
+  password: "",
+  confirmPassword: "",
+  dateOfBirth: "",
+  profileImage: null,
+};
+
+const pageSchemas = {
+  1: page1Schema,
+  2: page2Schema,
+  3: page3Schema,
+};
+
+const pageFields = {
+  1: ["firstName", "lastName", "username"],
+  2: ["email", "phoneNumber", "password", "confirmPassword"],
+  3: ["dateOfBirth", "profileImage"],
+};
+
+const formatZodErrors = (error) =>
+  Object.entries(error.flatten().fieldErrors).reduce(
+    (errors, [field, messages]) => ({
+      ...errors,
+      [field]: messages?.[0] ?? "Invalid value.",
+    }),
+    {}
+  );
 
 const Home = () => {
+  const [step, setStep] = useState(1);
+  const [values, setValues] = useState(initialValues);
+  const [errors, setErrors] = useState({});
+
+  const handleChange = (field, value) => {
+    setValues((currentValues) => ({
+      ...currentValues,
+      [field]: value,
+    }));
+
+    setErrors((currentErrors) => ({
+      ...currentErrors,
+      [field]: "",
+    }));
+  };
+
+  const clearStepErrors = (currentStep) => {
+    setErrors((currentErrors) => {
+      const nextErrors = { ...currentErrors };
+
+      pageFields[currentStep].forEach((field) => {
+        delete nextErrors[field];
+      });
+
+      return nextErrors;
+    });
+  };
+
+  const handleNext = (nextStep) => {
+    const result = pageSchemas[step].safeParse(values);
+
+    if (!result.success) {
+      setErrors((currentErrors) => ({
+        ...currentErrors,
+        ...formatZodErrors(result.error),
+      }));
+      return;
+    }
+
+    setValues((currentValues) => ({
+      ...currentValues,
+      ...result.data,
+    }));
+    clearStepErrors(step);
+    setStep(nextStep);
+  };
+
   return (
-    <div className="flex gap-5">
-      <div className="flex flex-col p-8 justify-between w-[480px] h-[689px] rounded-lg bg-white">
-        <div>
-          <Header></Header>
-          <div className="flex flex-col gap-3 w-104">
-            <Input
-              title="First Name"
-              req="First name cannot contain special characters or numbers."
-            ></Input>
-            <Input
-              title="Last Name"
-              req="Last name cannot contain special characters or numbers."
-            ></Input>
-            <Input
-              title="Username"
-              req="This username is already taken. Please choose another one."
-            ></Input>
-          </div>
-        </div>
-        <Track></Track>
-      </div>
-      <div className="flex flex-col p-8 justify-between w-[480px] h-[689px] rounded-lg bg-white h-auto">
-        <div>
-          <Header></Header>
-          <div className="flex flex-col gap-3 w-104">
-            <Input
-              title="Email"
-              req="Please provide a valid email address."
-            ></Input>
-            <Input
-              title="Phone Number"
-              req="Please enter a valid phone number."
-            ></Input>
-            <Input
-              title="Password"
-              req="Password must include letters and numbers."
-            ></Input>
-            <Input
-              title="Confirm Password"
-              req="Passwords do not match. Please try again."
-            ></Input>
-          </div>
-        </div>
-        <Track></Track>
-      </div>
-      <div className="flex flex-col p-8 justify-between w-[480px] h-[689px] rounded-lg bg-white">
-        <div>
-          <Header></Header>
-          <div className="flex flex-col gap-3 w-104">
-            <Calendar></Calendar>
-          </div>
-        </div>
-        <Track></Track>
-      </div>
-    </div>
+    <main className="flex min-h-screen w-full items-center justify-center px-4 py-8">
+      {step === 1 && (
+        <Page1
+          errors={errors}
+          onChange={handleChange}
+          onNext={handleNext}
+          values={values}
+        />
+      )}
+      {step === 2 && (
+        <Page2
+          errors={errors}
+          onBack={() => setStep(1)}
+          onChange={handleChange}
+          onNext={handleNext}
+          values={values}
+        />
+      )}
+      {step === 3 && (
+        <Page3
+          errors={errors}
+          onBack={() => setStep(2)}
+          onChange={handleChange}
+          onNext={handleNext}
+          values={values}
+        />
+      )}
+      {step === 4 && <Page4 setStep={setStep} />}
+    </main>
   );
 };
 
